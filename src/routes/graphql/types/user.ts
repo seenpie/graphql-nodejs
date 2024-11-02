@@ -9,7 +9,20 @@ import { UUIDType } from './uuid.js';
 import { Profile } from './profile.js';
 import { Post } from './post.js';
 import { list } from './utils/list.js';
-import { PrismaClient } from '@prisma/client';
+import { GraphQLContext } from './rootQueryType.js';
+
+type TUserSubscribe = {
+  subscriberId: string;
+  authorId: string;
+};
+
+type TSource = {
+  id: string;
+  name: string;
+  balance: number;
+  userSubscribedTo: TUserSubscribe[];
+  subscribedToUser: TUserSubscribe[];
+};
 
 export const User = new GraphQLObjectType({
   name: 'User',
@@ -28,44 +41,34 @@ export const User = new GraphQLObjectType({
 
     profile: {
       type: Profile,
+      resolve: async (source: TSource, _args, context: GraphQLContext) => {
+        return context.loaders.profileLoader.load(source.id);
+      },
     },
 
     posts: {
       type: nonNull(list(nonNull(Post))),
+      resolve: async (source: TSource, _args, context: GraphQLContext) => {
+        return context.loaders.postLoader.load(source.id);
+      },
     },
 
     userSubscribedTo: {
       type: nonNull(list(nonNull(User))),
 
-      resolve: (source: { id: string }, _args, { prisma }: { prisma: PrismaClient }) => {
-        return prisma.user.findMany({
-          where: {
-            subscribedToUser: {
-              some: {
-                subscriberId: source.id,
-              },
-            },
-          },
-        });
+      resolve: (source: TSource, _args, context: GraphQLContext) => {
+        const authorIds = source.userSubscribedTo.map((user) => user.authorId);
+
+        return context.loaders.userLoader.loadMany(authorIds);
       },
     },
 
     subscribedToUser: {
       type: nonNull(list(nonNull(User))),
-      resolve: async (
-        source: { id: string },
-        _args,
-        { prisma }: { prisma: PrismaClient },
-      ) => {
-        return prisma.user.findMany({
-          where: {
-            userSubscribedTo: {
-              some: {
-                authorId: source.id,
-              },
-            },
-          },
-        });
+      resolve: async (source: TSource, _args, context) => {
+        const subsIds = source.subscribedToUser.map((user) => user.subscriberId);
+
+        return context.loaders.userLoader.loadMany(subsIds);
       },
     },
   }),

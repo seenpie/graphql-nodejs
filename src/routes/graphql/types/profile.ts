@@ -3,8 +3,8 @@ import { nonNull } from './utils/nonNull.js';
 import { UUIDType } from './uuid.js';
 import { GraphQLInputObjectType, GraphQLInt } from 'graphql';
 import { MemberType } from './memberType.js';
-import { PrismaClient } from '@prisma/client';
 import { MemberTypeId } from './memberTypeId.js';
+import { GraphQLContext } from './rootQueryType.js';
 
 export const Profile = new GraphQLObjectType({
   name: 'Profile',
@@ -23,16 +23,8 @@ export const Profile = new GraphQLObjectType({
 
     memberType: {
       type: nonNull(MemberType),
-      resolve: (
-        source: { memberTypeId: string },
-        _args,
-        { prisma }: { prisma: PrismaClient },
-      ) => {
-        return prisma.memberType.findUnique({
-          where: {
-            id: source.memberTypeId,
-          },
-        });
+      resolve: (source: { memberTypeId: string }, _args, context: GraphQLContext) => {
+        return context.loaders.memberTypeLoader.load(source.memberTypeId);
       },
     },
   }),
