@@ -16,7 +16,7 @@ type TUserSubscribe = {
   authorId: string;
 };
 
-type TSource = {
+export type TUserSource = {
   id: string;
   name: string;
   balance: number;
@@ -41,14 +41,14 @@ export const User = new GraphQLObjectType({
 
     profile: {
       type: Profile,
-      resolve: async (source: TSource, _args, context: GraphQLContext) => {
+      resolve: async (source: TUserSource, _args, context: GraphQLContext) => {
         return context.loaders.profileLoader.load(source.id);
       },
     },
 
     posts: {
       type: nonNull(list(nonNull(Post))),
-      resolve: async (source: TSource, _args, context: GraphQLContext) => {
+      resolve: async (source: TUserSource, _args, context: GraphQLContext) => {
         return context.loaders.postLoader.load(source.id);
       },
     },
@@ -56,7 +56,7 @@ export const User = new GraphQLObjectType({
     userSubscribedTo: {
       type: nonNull(list(nonNull(User))),
 
-      resolve: (source: TSource, _args, context: GraphQLContext) => {
+      resolve: (source: TUserSource, _args, context: GraphQLContext) => {
         const authorIds = source.userSubscribedTo.map((user) => user.authorId);
 
         return context.loaders.userLoader.loadMany(authorIds);
@@ -65,7 +65,7 @@ export const User = new GraphQLObjectType({
 
     subscribedToUser: {
       type: nonNull(list(nonNull(User))),
-      resolve: async (source: TSource, _args, context) => {
+      resolve: async (source: TUserSource, _args, context) => {
         const subsIds = source.subscribedToUser.map((user) => user.subscriberId);
 
         return context.loaders.userLoader.loadMany(subsIds);
